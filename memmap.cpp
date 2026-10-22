@@ -930,7 +930,7 @@ bool8 CMemory::Init (void)
 		return (FALSE);
     }
 
-	ROMStorage.resize(MAX_ROM_SIZE + 0x200 + 0x8000);
+	ROMStorage.resize(MAX_ROM_SIZE + 0x400000 + 0x200 + 0x8000);
 	std::fill(ROMStorage.begin(), ROMStorage.end(), 0);
 	SRAMStorage.resize(SRAM_SIZE);
 	std::fill(SRAMStorage.begin(), SRAMStorage.end(), 0);
@@ -2891,6 +2891,9 @@ void CMemory::Map_SuperFXLoROMMap (void)
 	printf("Map_SuperFXLoROMMap\n");
 	map_System();
 
+	SuperFX.nRomBanks = CalculatedSize >> 15;
+	S9xResetSuperFX();
+
 	// Replicate the first 2Mb of the ROM at ROM + FX_MEMORY_32K_MIRRORS such that each 32K
 	// block is repeated twice in each 64K block.
 	for (int c = 0; c < 64; c++)
@@ -2904,7 +2907,7 @@ void CMemory::Map_SuperFXLoROMMap (void)
 		map_lorom(0x00, 0x3f, 0x8000, 0xffff, 0x200000);
 		map_lorom_offset(0x80, 0xbf, 0x8000, 0xffff, 0x200000, 0x200000);
 
-		map_hirom_offset(0x40, 0x6f, 0x0000, 0xffff, 0x300000, 0x800000);
+		map_hirom_offset(0x40, 0x6f, 0x0000, 0xffff, CalculatedSize, 0x800000);
 		map_hirom_offset(0xc0, 0xff, 0x0000, 0xffff, CalculatedSize, 0x400000);
 
 		map_space(0x00, 0x3f, 0x6000, 0x7fff, SRAM - 0x6000);

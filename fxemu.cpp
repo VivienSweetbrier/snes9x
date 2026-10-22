@@ -71,11 +71,11 @@ void S9xSetSuperFX (uint8 byte, uint16 address)
 			break;
 
 		case 0x3034:
-			Memory.FillRAM[0x3034] = byte & 0x7f;
+			Memory.FillRAM[0x3034] = (GSU.nRomBanks > 0x40) ? byte : (byte & 0x7f);
 			break;
 
 		case 0x3036:
-			Memory.FillRAM[0x3036] = byte & 0x7f;
+			Memory.FillRAM[0x3036] = (GSU.nRomBanks > 0x40) ? byte : (byte & 0x7f);
 			break;
 
 		case 0x3037:
@@ -225,8 +225,9 @@ static void FxReset (struct FxInfo_s *psFxInfo)
 	GSU.vPrevScreenHeight = ~0;
 	GSU.vPrevMode         = ~0;
 
-	// The GSU can't access more than 2mb (16mbits)
-	if (GSU.nRomBanks > 0x20)
+	if (GSU.nRomBanks > 0x200)
+		GSU.nRomBanks = 0x200;
+	else if (GSU.nRomBanks == 0)
 		GSU.nRomBanks = 0x20;
 
 	// Clear FxChip register space
@@ -238,21 +239,36 @@ static void FxReset (struct FxInfo_s *psFxInfo)
 	// Make ROM bank table
 	for (int i = 0; i < 256; i++)
 	{
-		uint32	b = i & 0x7f;
-
-		if (b >= 0x40)
+		if (GSU.nRomBanks > 0x40)
 		{
-			if (GSU.nRomBanks > 1)
-				b %= GSU.nRomBanks;
+			if (i < 0x40)
+			{
+				GSU.apvRomBank[i] = &GSU.pvRom[(i << 16) + FX_MEMORY_32K_MIRRORS];
+			}
 			else
-				b &= 1;
-
-			GSU.apvRomBank[i] = &GSU.pvRom[b << 16];
+			{
+				uint32	b = i % (GSU.nRomBanks >> 1);
+				GSU.apvRomBank[i] = &GSU.pvRom[b << 16];
+			}
 		}
 		else
 		{
-			b %= GSU.nRomBanks * 2;
-			GSU.apvRomBank[i] = &GSU.pvRom[(b << 16) + FX_MEMORY_32K_MIRRORS];
+			uint32	b = i & 0x7f;
+
+			if (b >= 0x40)
+			{
+				if (GSU.nRomBanks > 1)
+					b %= GSU.nRomBanks;
+				else
+					b &= 1;
+
+				GSU.apvRomBank[i] = &GSU.pvRom[b << 16];
+			}
+			else
+			{
+				b %= GSU.nRomBanks * 2;
+				GSU.apvRomBank[i] = &GSU.pvRom[(b << 16) + FX_MEMORY_32K_MIRRORS];
+			}
 		}
 	}
 
